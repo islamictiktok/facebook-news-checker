@@ -3,39 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التحقق من الأخبار</title>
+    <title>تحقق من صحة منشورات فيسبوك</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="bg-light">
     <div class="container mt-5">
-        <h2 class="text-center mb-4">أداة التحقق من صحة الأخبار</h2>
-        <form id="newsForm">
+        <h2 class="text-center">تحقق من صحة منشورات فيسبوك</h2>
+        <form id="checkForm" class="mt-4">
             <div class="mb-3">
-                <label for="newsText" class="form-label">أدخل نص الخبر:</label>
-                <textarea class="form-control" id="newsText" rows="4" required></textarea>
+                <label for="post_url" class="form-label">أدخل رابط المنشور:</label>
+                <input type="url" class="form-control" id="post_url" required>
             </div>
             <button type="submit" class="btn btn-primary w-100">تحقق</button>
         </form>
-        <div class="mt-4" id="resultContainer" style="display: none;">
-            <h4>نتيجة التحقق:</h4>
-            <p id="verificationResult" class="fw-bold"></p>
-        </div>
+
+        <div id="result" class="mt-4"></div>
     </div>
 
     <script>
-        document.getElementById('newsForm').addEventListener('submit', async function(event) {
+        document.getElementById("checkForm").addEventListener("submit", function(event) {
             event.preventDefault();
-            const newsText = document.getElementById('newsText').value;
-            
-            const response = await fetch('/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ news: newsText })
+            let postUrl = document.getElementById("post_url").value;
+            console.log("Post URL:", postUrl);
+            fetch("/", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: "post_url=" + encodeURIComponent(postUrl)
+            })
+            .then(response => response.json())
+            .then(data => {
+                let resultDiv = document.getElementById("result");
+                console.log(data);
+
+                // عرض نص المنشور
+                resultDiv.innerHTML = `<h5>نص المنشور:</h5><p>${data.post_text}</p>`;
+
+                // عرض نتائج التحقق من صحة المنشور
+                if (data.sources && data.sources.length > 0) {
+                    resultDiv.innerHTML += `<h5>نتائج التحقق من صحة المنشور:</h5>`;
+                    data.sources.forEach((source) => {
+                        resultDiv.innerHTML += `<p><a href="${source}" target="_blank">${source}</a></p>`;
+                    });
+                } else {
+                    resultDiv.innerHTML += `<p>لم يتم العثور على أخبار مشابهة لتأكيد صحة المنشور.</p>`;
+                }
+            })
+            .catch(error => {
+                let resultDiv = document.getElementById("result");
+                resultDiv.innerHTML = `<h5>حدث خطأ في الاتصال بالخادم</h5>`;
             });
-            
-            const data = await response.json();
-            document.getElementById('verificationResult').textContent = data.result;
-            document.getElementById('resultContainer').style.display = 'block';
         });
     </script>
 </body>
