@@ -1,11 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 from bs4 import BeautifulSoup
-import openai
-import os
-
-# إعداد API Key الخاص بـ OpenAI
-openai.api_key = "YOUR_OPENAI_API_KEY"
+from googlesearch import search
 
 app = Flask(__name__)
 
@@ -19,43 +15,41 @@ def fetch_facebook_post(url):
         return post_text["content"] if post_text else "لم يتم العثور على النص"
     return "خطأ في جلب المنشور"
 
-# دالة لتوليد رد باستخدام OpenAI بناءً على محتوى المنشور
-def generate_ai_response(post_text):
-    try:
-        response = openai.Completion.create(
-            engine="text-davinci-003",  # أو يمكن استخدام أي نموذج آخر متاح
-            prompt=f"أكتب رد مناسب على المنشور التالي: {post_text}",
-            max_tokens=150
-        )
-        return response.choices[0].text.strip()
-    except Exception as e:
-        print(f"Error generating AI response: {e}")
-        return "لم يتمكن الذكاء الصناعي من توليد رد."
-
 # دالة للتحقق من صحة المنشور عبر البحث عن أخبار مشابهة
 def check_news_validity(text):
-    query = f"{text} site:bbc.com OR site:cnn.com OR site:aljazeera.com"
-    # يمكنك إضافة منطقك هنا للتحقق من صحة المنشور
-    results = []  # على سبيل المثال، سنضع قائمة فارغة هنا كمثال
-    return results
+    try:
+        query = f"{text} site:bbc.com OR site:cnn.com OR site:aljazeera.com"
+        results = list(search(query))  # نستخدم البحث بدون الوسائط الإضافية
+        if len(results) > 0:
+            accuracy = len(results) * 10  # كل نتيجة تعتبر 10% من الصحة
+            accuracy = min(accuracy, 100)  # التأكد من أن النسبة لا تتجاوز 100%
+            return {"validity": "صحيح", "accuracy": accuracy}
+        else:
+            return {"validity": "غير صحيح", "accuracy": 0}
+    except Exception as e:
+        return {"validity": "خطأ في التحقق", "accuracy": 0}
+
+# دالة لتوليد رد مناسب بناءً على صحة المنشور
+def generate_response(validity, accuracy):
+    if validity == "صحيح":
+        return "المنشور صحيح، يمكنك متابعة هذا الخبر بثقة."
+    elif validity == "غير صحيح":
+        return "المنشور غير صحيح، تحقق من المصدر قبل التصديق."
+    else:
+        return "حدث خطأ أثناء التحقق، يرجى المحاولة لاحقًا."
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
         post_url = request.form.get("post_url")
         post_text = fetch_facebook_post(post_url)
-        
-        # التحقق من صحة المنشور
-        sources = check_news_validity(post_text)
-        
-        # استخدام الذكاء الصناعي لتوليد الرد على المنشور
-        ai_response = generate_ai_response(post_text)
-        
+        result = check_news_validity(post_text)
+        response = generate_response(result["validity"], result["accuracy"])
         return jsonify({
-            "post_text": post_text,
-            "response": ai_response,
-        })
-    
+            "validity": result["validity"],
+            "accuracy": result["accuracy"],
+            "response": response
+        })  # إرجاع النتيجة مع الرد
     return render_template("index.html")
 
 if __name__ == "__main__":
