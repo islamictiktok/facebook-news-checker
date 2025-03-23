@@ -1,64 +1,44 @@
-from flask import Flask, render_template, request, jsonify
-import requests
-from bs4 import BeautifulSoup
+from flask import Flask, render_template, request, jsonify, send_file
 import os
+import yt_dlp
 
 app = Flask(__name__)
 
-# مفتاح API من NewsAPI
-NEWS_API_KEY = "30be20afcef3449eaebfddd02b220f5a"  # استبدل بمفتاحك الخاص
+# مجلد حفظ الفيديوهات
+DOWNLOAD_FOLDER = "downloads"
+if not os.path.exists(DOWNLOAD_FOLDER):
+    os.makedirs(DOWNLOAD_FOLDER)
 
-# دالة لجلب محتوى المنشور من فيسبوك
-def fetch_facebook_post(url):
-    headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(url, headers=headers)
-
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, "html.parser")
-        post_text = soup.find("meta", property="og:description")
-        return post_text["content"] if post_text else "لم يتم العثور على النص"
-    
-    return "خطأ في جلب المنشور"
-
-# دالة للتحقق من صحة المنشور عبر البحث عن أخبار مشابهة باستخدام NewsAPI
-def check_news_validity(text):
-    # تقليل النص إلى كلمات رئيسية (بدون علامات الترقيم)
-    words = text.split()
-    keywords = " ".join(words[:5])  # استخدام أول 5 كلمات من المنشور للبحث، أو يمكن تحسين ذلك
-
-    url = f"https://newsapi.org/v2/everything?q={keywords}&language=ar&pageSize=10&sortBy=relevance&apiKey={NEWS_API_KEY}"
-    
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        articles = data.get("articles", [])
-
-        if articles:
-            # إرجاع تفاصيل المقالات (العنوان، الرابط، المصدر)
-            return [
-                f"<a href='{article['url']}' target='_blank'>{article['title']}</a> - <em>{article['source']['name']}</em>"
-                for article in articles
-            ]
-        else:
-            return ["❌ لم يتم العثور على أخبار مشابهة."]
-    
-    return ["⚠ حدث خطأ أثناء التحقق من الأخبار."]
-
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def index():
-    if request.method == "POST":
-        post_url = request.form.get("post_url")
-        post_text = fetch_facebook_post(post_url)
-        
-        # التحقق من صحة المنشور عبر البحث عن أخبار مشابهة
-        sources = check_news_validity(post_text)
-
-        return jsonify({
-            "post_text": post_text,
-            "sources": sources
-        })
-
     return render_template("index.html")
 
+@app.route("/download", methods=["POST"])
+def download_video():
+    data = request.get_json()
+    video_url = data.get("url")
+
+    if not video_url:
+        return jsonify({"success": False, "error": "No URL provided!"})
+
+    try:
+        ydl_opts = {
+            "outtmpl": os.path.join(DOWNLOAD_FOLDER, "%(title)s.%(ext)s"),
+            "format": "best",
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=True)
+            video_path = ydl.prepare_filename(info)
+
+        return jsonify({"success": True, "path": f"/download_file/{os.path.basename(video_path)}"})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route("/download_file/<filename>")
+def download_file(filename):
+    return send_file(os.path.join(DOWNLOAD_FOLDER, filename), as_attachment=True)
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
