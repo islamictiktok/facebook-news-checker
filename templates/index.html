@@ -80,8 +80,9 @@
 
             data.quality_options.forEach(option => {
                 let optionElement = document.createElement("option");
+                let sizeMB = option.size > 0 ? (option.size / (1024 * 1024)).toFixed(2) + " MB" : "غير محدد";
                 optionElement.value = option.format_id;
-                optionElement.textContent = `${option.resolution} (${option.size ? (option.size / (1024 * 1024)).toFixed(2) + " MB" : "غير محدد"}) - ${option.quality}`;
+                optionElement.textContent = `${option.resolution} (${sizeMB}) - ${option.quality}`;
                 select.appendChild(optionElement);
             });
 
@@ -116,7 +117,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    statusMessage.innerHTML = `<a href="${data.path}" class="btn btn-success">تحميل الفيديو</a>`;
+                    window.location.href = data.path;  // تحميل الفيديو مباشرة
                 } else {
                     statusMessage.textContent = "حدث خطأ أثناء التنزيل!";
                 }
