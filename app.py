@@ -38,8 +38,7 @@ def get_video_info():
             quality_options.append({
                 "quality": format.get("format_note", "غير محدد"),
                 "resolution": format.get("height", "غير محدد"),
-                "size": format.get("filesize", "غير محدد"),
-                "url": format.get("url"),
+                "size": format.get("filesize", 0),  # الحجم بالبايت
                 "format_id": format.get("format_id")
             })
 
@@ -81,8 +80,7 @@ def download_video():
         return jsonify({
             "success": True,
             "path": f"/download_file/{os.path.basename(video_path)}",
-            "title": info.get("title", "Video"),
-            "size": info.get("filesize", 0)
+            "size": info.get("filesize", 0)  # إرسال الحجم
         })
 
     except Exception as e:
