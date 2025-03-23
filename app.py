@@ -13,6 +13,45 @@ if not os.path.exists(DOWNLOAD_FOLDER):
 def index():
     return render_template("index.html")
 
+@app.route("/get_video_info", methods=["POST"])
+def get_video_info():
+    data = request.get_json()
+    video_url = data.get("url")
+
+    if not video_url:
+        return jsonify({"success": False, "error": "لم يتم إدخال رابط!"})
+
+    try:
+        ydl_opts = {
+            "noplaylist": True,
+            "quiet": True
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=False)
+
+        formats = info.get("formats", [])
+        quality_options = []
+
+        # استخراج خيارات الجودة من الفيديو
+        for format in formats:
+            quality_options.append({
+                "quality": format.get("format_note", "غير محدد"),
+                "resolution": format.get("height", "غير محدد"),
+                "size": format.get("filesize", "غير محدد"),
+                "url": format.get("url"),
+                "format_id": format.get("format_id")
+            })
+
+        return jsonify({
+            "success": True,
+            "quality_options": quality_options,
+            "title": info.get("title", "Video")
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
 @app.route("/download", methods=["POST"])
 def download_video():
     data = request.get_json()
