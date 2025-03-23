@@ -8,18 +8,31 @@ app = Flask(__name__)
 def fetch_facebook_post(url):
     headers = {"User-Agent": "Mozilla/5.0"}
     response = requests.get(url, headers=headers)
+    
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, "html.parser")
         post_text = soup.find("meta", property="og:description")
         return post_text["content"] if post_text else "لم يتم العثور على النص"
+    
     return "خطأ في جلب المنشور"
 
 # دالة للتحقق من صحة المنشور عبر البحث عن أخبار مشابهة
 def check_news_validity(text):
-    query = f"{text} site:bbc.com OR site:cnn.com OR site:aljazeera.com"
-    # يمكنك إضافة منطقك هنا للتحقق من صحة المنشور
-    results = []  # على سبيل المثال، سنضع قائمة فارغة هنا كمثال
-    return results
+    search_url = f"https://www.google.com/search?q={text} site:bbc.com OR site:cnn.com OR site:aljazeera.com"
+    
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(search_url, headers=headers)
+    
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, "html.parser")
+        results = soup.find_all("h3")  # البحث عن عناوين الأخبار
+    
+        if results:
+            return [result.text for result in results[:5]]  # إرجاع أول 5 نتائج
+        else:
+            return ["لم يتم العثور على أخبار مشابهة لتأكيد صحة المنشور."]
+    
+    return ["حدث خطأ أثناء التحقق من صحة الأخبار."]
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -32,7 +45,7 @@ def index():
         
         return jsonify({
             "post_text": post_text,
-            "verified_sources": sources
+            "sources": sources
         })
     
     return render_template("index.html")
