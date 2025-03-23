@@ -4,7 +4,7 @@ import yt_dlp
 
 app = Flask(__name__)
 
-# مجلد حفظ الفيديوهات
+# مجلد لحفظ الفيديوهات
 DOWNLOAD_FOLDER = "downloads"
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
@@ -19,7 +19,7 @@ def download_video():
     video_url = data.get("url")
 
     if not video_url:
-        return jsonify({"success": False, "error": "No URL provided!"})
+        return jsonify({"success": False, "error": "لم يتم إدخال رابط!"})
 
     try:
         ydl_opts = {
@@ -41,4 +41,4 @@ def download_file(filename):
     return send_file(os.path.join(DOWNLOAD_FOLDER, filename), as_attachment=True)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
