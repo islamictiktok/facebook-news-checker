@@ -17,6 +17,8 @@ def index():
 def download_video():
     data = request.get_json()
     video_url = data.get("url")
+    quality = data.get("quality")
+    download_audio = data.get("audio", False)
 
     if not video_url:
         return jsonify({"success": False, "error": "لم يتم إدخال رابط!"})
@@ -24,14 +26,25 @@ def download_video():
     try:
         ydl_opts = {
             "outtmpl": os.path.join(DOWNLOAD_FOLDER, "%(title)s.%(ext)s"),
-            "format": "best",
+            "format": quality if not download_audio else "bestaudio/best",  # لاختيار جودة الفيديو أو الصوت
+            "postprocessors": [{
+                "key": "FFmpegAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }] if download_audio else [],
+            "noplaylist": True,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
             video_path = ydl.prepare_filename(info)
 
-        return jsonify({"success": True, "path": f"/download_file/{os.path.basename(video_path)}"})
+        return jsonify({
+            "success": True,
+            "path": f"/download_file/{os.path.basename(video_path)}",
+            "title": info.get("title", "Video"),
+            "size": info.get("filesize", 0)
+        })
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
