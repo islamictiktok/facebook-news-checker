@@ -24,7 +24,6 @@
         document.getElementById("checkForm").addEventListener("submit", function(event) {
             event.preventDefault();
             let postUrl = document.getElementById("post_url").value;
-            console.log("Post URL:", postUrl);
             fetch("/", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -33,9 +32,12 @@
             .then(response => response.json())
             .then(data => {
                 let resultDiv = document.getElementById("result");
-                console.log(data);
-                resultDiv.innerHTML = `<h5>نص المنشور:</h5><p>${data.post_text}</p>`;
-                resultDiv.innerHTML += `<h5>الرد على المنشور:</h5><p>${data.response}</p>`;
+                if (data.validity && data.accuracy !== undefined) {
+                    resultDiv.innerHTML = `<h5>نتيجة التحقق:</h5><p>المنشور ${data.validity}</p>`;
+                    resultDiv.innerHTML += `<h5>نسبة الصحة: ${data.accuracy}%</h5>`;
+                } else {
+                    resultDiv.innerHTML = `<h5>حدث خطأ في التحقق</h5>`;
+                }
             })
             .catch(error => {
                 let resultDiv = document.getElementById("result");
