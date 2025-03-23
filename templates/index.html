@@ -3,53 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تحقق من صحة منشورات فيسبوك</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <title>موقع تنزيل الفيديوهات</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            direction: rtl;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin-top: 50px;
+        }
+    </style>
 </head>
-<body class="bg-light">
-    <div class="container mt-5">
-        <h2 class="text-center">تحقق من صحة منشورات فيسبوك</h2>
-        <form id="checkForm" class="mt-4">
-            <div class="mb-3">
-                <label for="post_url" class="form-label">أدخل رابط المنشور:</label>
-                <input type="url" class="form-control" id="post_url" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">تحقق</button>
-        </form>
-
-        <div id="result" class="mt-4"></div>
+<body>
+    <div class="container">
+        <h1 class="mb-4">موقع تنزيل الفيديوهات</h1>
+        <div class="input-group mb-3">
+            <input type="text" id="videoUrl" class="form-control" placeholder="أدخل رابط الفيديو">
+            <button class="btn btn-primary" onclick="downloadVideo()">تنزيل</button>
+        </div>
+        <p id="statusMessage" class="text-danger"></p>
     </div>
 
     <script>
-        document.getElementById("checkForm").addEventListener("submit", function(event) {
-            event.preventDefault();
-            let postUrl = document.getElementById("post_url").value;
-            
-            fetch("/", {
+        function downloadVideo() {
+            let videoUrl = document.getElementById("videoUrl").value;
+            let statusMessage = document.getElementById("statusMessage");
+
+            if (!videoUrl) {
+                statusMessage.textContent = "الرجاء إدخال رابط الفيديو!";
+                return;
+            }
+
+            statusMessage.textContent = "جاري التحميل...";
+
+            fetch("/download", {
                 method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: "post_url=" + encodeURIComponent(postUrl)
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ url: videoUrl })
             })
             .then(response => response.json())
             .then(data => {
-                let resultDiv = document.getElementById("result");
-                resultDiv.innerHTML = `<h5>نص المنشور:</h5><p>${data.post_text}</p>`;
-                
-                if (data.sources.length > 0) {
-                    resultDiv.innerHTML += `<h5>نتائج البحث عن أخبار مشابهة:</h5><ul class="list-group">`;
-                    data.sources.forEach(source => {
-                        resultDiv.innerHTML += `<li class="list-group-item">${source}</li>`;
-                    });
-                    resultDiv.innerHTML += `</ul>`;
+                if (data.success) {
+                    statusMessage.innerHTML = `<a href="${data.path}" class="btn btn-success">تحميل الفيديو</a>`;
                 } else {
-                    resultDiv.innerHTML += `<h5>لم يتم العثور على أخبار مشابهة.</h5>`;
+                    statusMessage.textContent = "حدث خطأ أثناء التنزيل!";
                 }
             })
             .catch(error => {
-                let resultDiv = document.getElementById("result");
-                resultDiv.innerHTML = `<h5>حدث خطأ في الاتصال بالخادم</h5>`;
+                statusMessage.textContent = "خطأ في الاتصال بالخادم!";
             });
-        });
+        }
     </script>
 </body>
 </html>
