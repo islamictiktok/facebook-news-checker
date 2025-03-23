@@ -22,10 +22,11 @@ def fetch_facebook_post(url):
 
 # دالة للتحقق من صحة المنشور عبر البحث عن أخبار مشابهة باستخدام NewsAPI
 def check_news_validity(text):
-    # تحسين الاستعلام بحيث نأخذ كلمات رئيسية فقط من النص
-    query = " ".join(text.split()[:5])  # أخذ أول خمس كلمات من النص للبحث
+    # تقليل النص إلى كلمات رئيسية (بدون علامات الترقيم)
+    words = text.split()
+    keywords = " ".join(words[:5])  # استخدام أول 5 كلمات من المنشور للبحث، أو يمكن تحسين ذلك
 
-    url = f"https://newsapi.org/v2/everything?q={query}&language=ar&pageSize=10&apiKey={NEWS_API_KEY}"
+    url = f"https://newsapi.org/v2/everything?q={keywords}&language=ar&pageSize=10&sortBy=relevance&apiKey={NEWS_API_KEY}"
     
     response = requests.get(url)
     if response.status_code == 200:
@@ -33,8 +34,11 @@ def check_news_validity(text):
         articles = data.get("articles", [])
 
         if articles:
-            # إرجاع أول 5 مقالات
-            return [f"<a href='{article['url']}' target='_blank'>{article['title']}</a>" for article in articles]
+            # إرجاع تفاصيل المقالات (العنوان، الرابط، المصدر)
+            return [
+                f"<a href='{article['url']}' target='_blank'>{article['title']}</a> - <em>{article['source']['name']}</em>"
+                for article in articles
+            ]
         else:
             return ["❌ لم يتم العثور على أخبار مشابهة."]
     
