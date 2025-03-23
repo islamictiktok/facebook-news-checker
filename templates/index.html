@@ -24,7 +24,7 @@
         document.getElementById("checkForm").addEventListener("submit", function(event) {
             event.preventDefault();
             let postUrl = document.getElementById("post_url").value;
-            console.log("Post URL:", postUrl);
+            
             fetch("/", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -33,19 +33,16 @@
             .then(response => response.json())
             .then(data => {
                 let resultDiv = document.getElementById("result");
-                console.log(data);
-
-                // عرض نص المنشور
                 resultDiv.innerHTML = `<h5>نص المنشور:</h5><p>${data.post_text}</p>`;
-
-                // عرض نتائج التحقق من صحة المنشور
-                if (data.sources && data.sources.length > 0) {
-                    resultDiv.innerHTML += `<h5>نتائج التحقق من صحة المنشور:</h5>`;
-                    data.sources.forEach((source) => {
-                        resultDiv.innerHTML += `<p><a href="${source}" target="_blank">${source}</a></p>`;
+                
+                if (data.sources.length > 0) {
+                    resultDiv.innerHTML += `<h5>نتائج البحث عن أخبار مشابهة:</h5><ul class="list-group">`;
+                    data.sources.forEach(source => {
+                        resultDiv.innerHTML += `<li class="list-group-item">${source}</li>`;
                     });
+                    resultDiv.innerHTML += `</ul>`;
                 } else {
-                    resultDiv.innerHTML += `<p>لم يتم العثور على أخبار مشابهة لتأكيد صحة المنشور.</p>`;
+                    resultDiv.innerHTML += `<h5>لم يتم العثور على أخبار مشابهة.</h5>`;
                 }
             })
             .catch(error => {
